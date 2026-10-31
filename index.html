@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>さゆちゃん</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@300;400;500&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --scroll-progress-deg: 0deg;
+    --surface: rgba(45,45,45,0.68);
+    --surface-strong: rgba(45,45,45,0.82);
+    --border: rgba(210,210,210,0.16);
+    --border-strong: rgba(220,220,220,0.26);
+    --blue: #3B8EE8;
+    --purple: #9B8ECC;
+    --text-primary: #edf3ff;
+    --text-secondary: #bdc9dc;
+    --text-muted: #7f8da5;
+    --shadow-sm: 0 2px 20px rgba(0,0,0,0.32), 0 1px 5px rgba(0,0,0,0.2);
+    --shadow-md: 0 10px 36px rgba(0,0,0,0.46), 0 2px 10px rgba(0,0,0,0.3);
+    --radius-card: 22px;
+    --radius-pill: 100px;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: inherit; margin: 0; padding: 0; }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: env(safe-area-inset-top, 0px);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  html::-webkit-scrollbar { display: none; }
+
+  body {
+    font-family: 'Zen Kaku Gothic New', 'LINE Seed JP', sans-serif;
+    color: var(--text-primary);
+    line-height: 1.7;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    background: linear-gradient(135deg, #080d18 0%, #101326 30%, #0b1a2a 56%, #111b1b 78%, #17131e 100%);
+    background-size: 240% 240%;
+    animation: pastelBackground 18s ease-in-out infinite alternate;
+    cursor: none;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  body::-webkit-scrollbar { display: none; }
+
+  a, button, [role="button"], input, textarea, select {
+    cursor: none !important;
+  }
+
+  @keyframes pastelBackground {
+    0% { background-position: 0% 30%; }
+    100% { background-position: 100% 70%; }
+  }
+
+  /* ── Custom cursor and scroll progress ── */
+  #custom-cursor {
+    position: fixed;
+    pointer-events: none;
+    z-index: 300;
+    opacity: 0;
+    transition: opacity 0.2s ease, width 0.25s ease, height 0.25s ease;
+  }
+  #custom-cursor {
+    width: 18px;
+    height: 18px;
+    position: fixed;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(18, 22, 30, 0.28);
+    box-shadow: 0 2px 12px rgba(12, 16, 24, 0.13);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .cursor-ring {
+    position: absolute;
+    inset: -6px;
+    width: calc(100% + 12px);
+    height: calc(100% + 12px);
+    overflow: visible;
+    transform: rotate(-90deg);
+    animation: cursorRainbow 32s linear infinite;
+  }
+  .cursor-ring-track,
+  .cursor-ring-progress {
+    fill: none;
+    stroke-width: 2;
+  }
+  .cursor-ring-track { stroke: rgba(255,255,255,0.18); }
+  .cursor-ring-progress {
+    stroke: url(#cursor-rainbow-gradient);
+    stroke-linecap: round;
+    stroke-dasharray: 113.1;
+    stroke-dashoffset: 113.1;
+    transition: stroke-dashoffset 0.18s ease-out;
+    filter: drop-shadow(0 0 3px rgba(225,225,240,0.28));
+  }
+  @keyframes cursorRainbow {
+    from { filter: hue-rotate(0deg); }
+    to { filter: hue-rotate(360deg); }
+  }
+  body.cursor-active #custom-cursor,
+  body.cursor-active #custom-cursor { opacity: 1; }
+  body.cursor-link #custom-cursor {
+    width: 34px;
+    height: 34px;
+  }
+
+  /* ── 背景画像（めっちゃぼかし） ── */
+  #bg-image {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image: url('https://github.com/osayuchan/osayume/blob/main/1500x500.jpg?raw=true');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    filter: blur(32px) brightness(0.38) saturate(0.78);
+    transform: scale(1.08);
+    pointer-events: none;
+  }
+  /* 背景の上に薄い白オーバーレイ */
+  #bg-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: rgba(3,7,16,0.48);
+    pointer-events: none;
+  }
+
+  /* ── 上左から差し込むやわらかな光 ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at -8% -6%, rgba(220,235,255,0.26) 0, rgba(180,205,240,0.10) 18%, transparent 46%);
+    mix-blend-mode: screen;
+  }
+
+  /* ── Liquid glass card highlight ── */
+  .card,
+  .interest-card,
+  .gadget-card,
+  .connect-item {
+    position: relative;
+    overflow: hidden;
+    border-color: rgba(210,210,210,0.18);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* ── Wrapper ── */
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0 14px;
+  }
+
+  /* ── Hero ── */
+  #hero {
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 80px 0 60px;
+    opacity: 0;
+    transform: translateY(24px);
+    animation: heroIn 1.0s cubic-bezier(.22,.68,0,1.2) 0.3s forwards;
+  }
+  @keyframes heroIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-name {
+    font-size: clamp(64px, 18vw, 100px);
+    font-weight: 300;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    opacity: 0;
+    animation: heroIn 0.9s cubic-bezier(.22,.68,0,1.2) 0.45s forwards;
+  }
+
+  .hero-tagline {
+    font-size: clamp(17px, 4.8vw, 21px);
+    font-weight: 300;
+    color: var(--text-secondary);
+    font-family: 'LINE Seed JP', sans-serif;
+    letter-spacing: 0.02em;
+    margin-bottom: 10px;
+    opacity: 0;
+    animation: heroIn 0.8s ease 0.65s forwards;
+  }
+
+  .hero-sub {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-muted);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin-bottom: 52px;
+    opacity: 0;
+    animation: heroIn 0.8s ease 0.8s forwards;
+  }
+
+  .hero-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    color: var(--blue);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 12px 22px;
+    border-radius: var(--radius-pill);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    opacity: 0;
+    animation: heroIn 0.8s ease 1.0s forwards;
+    transition: transform 0.3s ease, background 0.3s ease;
+  }
+  .hero-cta:active {
+    transform: scale(0.97);
+    background: var(--surface-strong);
+  }
+  .hero-cta svg { flex-shrink: 0; }
+
+  /* ── Section base ── */
+  section { padding: 64px 0; }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    color: var(--blue);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, rgba(59,142,232,0.3), transparent);
+  }
+
+  /* ── Card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    box-shadow: var(--shadow-sm);
+    padding: 26px 22px;
+    transition: transform 0.35s cubic-bezier(.22,.68,0,1.1), box-shadow 0.35s ease;
+  }
+  .card:active {
+    transform: scale(0.985);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ── About ── */
+  #about .about-text {
+    font-family: 'LINE Seed JP', sans-serif;
+    font-size: 15px;
+    font-weight: 300;
+    color: var(--text-secondary);
+    line-height: 2;
+  }
+  #about .about-text p + p { margin-top: 1.5em; }
+  #about .about-text p:first-child {
+    font-size: 16px;
+    color: var(--text-primary);
+    font-weight: 400;
+  }
+
+  /* ── New Chapter ── */
+  #new-chapter .chapter-visual {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .chapter-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-pill);
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--blue);
+    width: fit-content;
+    letter-spacing: 0.04em;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+  .chapter-badge .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--blue);
+    animation: pulseDot 2s ease-in-out infinite;
+  }
+  @keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.6); }
+  }
+  .chapter-heading {
+    font-size: clamp(26px, 7.5vw, 36px);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    line-height: 1.25;
+  }
+  .chapter-desc {
+    font-family: 'LINE Seed JP', sans-serif;
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 300;
+    line-height: 1.9;
+    margin-top: 16px;
+  }
+
+  /* ── Interests ── */
+  #interests .interests-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .interest-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    padding: 18px 14px;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .interest-card:active {
+    transform: scale(0.97);
+    box-shadow: var(--shadow-md);
+  }
+  .interest-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-primary);
+    display: block;
+    letter-spacing: 0.02em;
+  }
+  .interest-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-family: 'LINE Seed JP', sans-serif;
+    font-weight: 300;
+  }
+
+  /* ── Gadget (iPhone) ── */
+  .gadget-card {
+    background: var(--surface-strong);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .gadget-card:active { transform: scale(0.985); box-shadow: var(--shadow-md); }
+  .gadget-img {
+    width: 100%;
+    aspect-ratio: 4/3;
+    max-height: 300px;
+    object-fit: cover;
+    display: block;
+    background: rgba(0,0,0,0.16);
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    transition: filter 0.3s ease;
+  }
+  .gadget-label {
+    padding: 12px 16px 14px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .gadget-label-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  .gadget-label-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'LINE Seed JP', sans-serif;
+    font-weight: 300;
+  }
+
+  /* ── Lightbox ── */
+  #lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    pointer-events: none;
+    visibility: hidden;
+    transition: visibility 0s linear 0.4s;
+  }
+  #lightbox.open {
+    pointer-events: all;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+  .lb-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(10,15,25,0.55);
+    opacity: 0;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    transition: opacity 0.4s ease;
+  }
+  #lightbox.open .lb-backdrop {
+    opacity: 1;
+  }
+  .lb-img {
+    position: relative;
+    z-index: 1;
+    max-width: 100%;
+    max-height: 80svh;
+    border-radius: 18px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+    object-fit: contain;
+    opacity: 0;
+    transform: scale(0.96);
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(.22,.68,0,1.15);
+  }
+  #lightbox.open .lb-img {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .lb-close {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 16px);
+    right: 16px;
+    z-index: 2;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0);
+    border: 1px solid rgba(255,255,255,0);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: rgba(255,255,255,0);
+    font-size: 18px;
+    line-height: 1;
+    opacity: 0;
+    transform: rotate(-180deg) scale(0.72);
+    transition: opacity 0.35s ease, transform 0.5s cubic-bezier(.22,.68,0,1.15), background 0.35s ease, border-color 0.35s ease, color 0.35s ease;
+  }
+  #lightbox.open .lb-close {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+  }
+  .lb-close:active { background: rgba(255,255,255,0.35); }
+
+  /* ── Connect ── */
+  .connect-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .connect-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 16px;
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    box-shadow: var(--shadow-sm);
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .connect-item:active {
+    transform: scale(0.97);
+    box-shadow: var(--shadow-md);
+  }
+  .connect-favicon {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.4);
+  }
+  .connect-text { flex: 1; }
+  .connect-name {
+    font-size: 14px;
+    font-weight: 500;
+    display: block;
+  }
+  .connect-status {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.03em;
+  }
+  .connect-arrow {
+    color: var(--text-muted);
+    font-size: 18px;
+    opacity: 0.4;
+    font-weight: 300;
+  }
+
+  /* ── Footer ── */
+  footer {
+    padding: 44px 0 52px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .footer-brand {
+    font-size: 20px;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+  }
+  .footer-copy {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Scroll reveal ── */
+  .reveal {
+    opacity: 0;
+    transform: none;
+    filter: blur(10px);
+    transition: opacity 0.7s ease, filter 0.7s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+
+  /* ── Reduced motion ── */
+  @media (prefers-reduced-motion: reduce) {
+    *, .reveal, #hero, .hero-name, .hero-tagline, .hero-sub, .hero-cta {
+      animation: none !important;
+      transition: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+      filter: none !important;
+    }
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    body { cursor: auto; }
+    #custom-cursor { display: none; }
+  }
+
+  /* ── Tablet+ ── */
+  @media (min-width: 600px) {
+    .wrapper { padding: 0 24px; }
+    #hero { padding-top: 100px; }
+    .card { padding: 30px 26px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 背景画像（ぼかし） -->
+<div id="bg-image" aria-hidden="true"></div>
+<div id="bg-overlay" aria-hidden="true"></div>
+<div id="custom-cursor" aria-hidden="true">
+  <svg class="cursor-ring" viewBox="0 0 44 44" aria-hidden="true">
+    <defs>
+      <linearGradient id="cursor-rainbow-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#ffb8d2" />
+        <stop offset="16%" stop-color="#ffd6a8" />
+        <stop offset="32%" stop-color="#fff0a8" />
+        <stop offset="48%" stop-color="#c9edb7" />
+        <stop offset="64%" stop-color="#a9e5ef" />
+        <stop offset="80%" stop-color="#b9c8ff" />
+        <stop offset="100%" stop-color="#dec0ff" />
+      </linearGradient>
+    </defs>
+    <circle class="cursor-ring-track" cx="22" cy="22" r="18" />
+    <circle id="cursor-ring-progress" class="cursor-ring-progress" cx="22" cy="22" r="18" />
+  </svg>
+</div>
+
+<main>
+
+  <!-- ── HERO ── -->
+  <div class="wrapper" style="position:relative;">
+    <section id="hero" aria-label="ファーストビュー">
+      <h1 class="hero-name">OSAYU.</h1>
+      <button class="hero-cta" onclick="document.getElementById('about').scrollIntoView({behavior:'smooth'})">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 1v12M2 8l5 5 5-5" stroke="#3B8EE8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Good Morning
+      </button>
+    </section>
+  </div>
+
+  <!-- ── ABOUT ── -->
+  <div class="wrapper">
+    <section id="about" aria-label="About">
+      <p class="section-label reveal">About</p>
+      <div class="card reveal">
+        <div class="about-text">
+          <p>おはようございます、おさゆです。</p>
+          <p>ガジェット界隈に入りたてほやほやの無知ですが何卒宜しくお願い致します。</p>
+          <p>これからいろんな人と関わったり、この界隈の雰囲気とかを見てみたいので浮上多めになるかもしれませんが宜しくお願いします。</p>
+          <p>あと自称キチガイなので許してください。</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ── INTERESTS ── -->
+  <div class="wrapper">
+    <section id="interests" aria-label="Interests">
+      <p class="section-label reveal">特徴?</p>
+      <div class="interests-grid reveal">
+        <div class="interest-card">
+          <span class="interest-name">キャリアショップ</span>
+          <p class="interest-desc">店員にスマホドやりにいく</p>
+        </div>
+        <div class="interest-card">
+          <span class="interest-name">メルカリ</span>
+          <p class="interest-desc">激安価格ミス出品買いたい</p>
+        </div>
+        <div class="interest-card">
+          <span class="interest-name">産廃泥</span>
+          <p class="interest-desc">大人のおもちゃ</p>
+        </div>
+        <div class="interest-card">
+          <span class="interest-name">産廃2</span>
+          <p class="interest-desc">ハイエンド買うために貯金したと思ったら産廃買ってる</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ── GADGET ── -->
+  <div class="wrapper">
+    <section id="gadget" aria-label="Gadget">
+      <p class="section-label reveal">布陣</p>
+      <div class="gadget-card reveal" onclick="openLightbox()" role="button" tabindex="0" aria-label="iPhone 15の写真を拡大">
+        <img
+          class="gadget-img"
+          src="https://github.com/osayuchan/osayume/blob/main/1793416876269.jpg?raw=true"
+          alt="iPhone 15"
+          loading="lazy"
+        >
+        <div class="gadget-label">
+          <span class="gadget-label-name">iPhone 15</span>
+          <span class="gadget-label-sub">Apple A16 Bionic</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ── LIGHTBOX ── -->
+  <div id="lightbox" role="dialog" aria-modal="true" aria-label="iPhone 15 拡大表示">
+    <div class="lb-backdrop" onclick="closeLightbox()"></div>
+    <button class="lb-close" onclick="closeLightbox()" aria-label="閉じる">×</button>
+    <img
+      class="lb-img"
+      src="https://github.com/osayuchan/osayume/blob/main/1793416876269.jpg?raw=true"
+      alt="iPhone 15"
+    >
+  </div>
+
+  <!-- ── CONNECT ── -->
+  <div class="wrapper">
+    <section id="connect" aria-label="Connect">
+      <p class="section-label reveal">SNS</p>
+      <div class="connect-list">
+        <a class="connect-item reveal" href="https://x.com/osayuhamizu" target="_blank" rel="noopener">
+          <img
+            class="connect-favicon"
+            src="https://www.google.com/s2/favicons?sz=64&domain=x.com"
+            alt="X"
+            loading="lazy"
+          >
+          <div class="connect-text">
+            <span class="connect-name">X (Twitter)</span>
+            <span class="connect-status">@osayuhamizu</span>
+          </div>
+          <span class="connect-arrow">›</span>
+        </a>
+        <a class="connect-item reveal" href="https://www.tiktok.com/@osayuhamizu" target="_blank" rel="noopener">
+          <img
+            class="connect-favicon"
+            src="https://www.google.com/s2/favicons?sz=64&domain=tiktok.com"
+            alt="TikTok"
+            loading="lazy"
+          >
+          <div class="connect-text">
+            <span class="connect-name">TikTok</span>
+            <span class="connect-status">@osayuhamizu</span>
+          </div>
+          <span class="connect-arrow">›</span>
+        </a>
+      </div>
+    </section>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <div class="wrapper">
+    <footer>
+      <p class="footer-brand reveal">OSAYU.</p>
+      <p class="footer-copy reveal">© 2026 おさゆちゃん — Version 1.0</p>
+    </footer>
+  </div>
+
+</main>
+
+<script>
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+  reveals.forEach(el => io.observe(el));
+
+  // Custom cursor and scroll progress indicator
+  const cursor = document.getElementById('custom-cursor');
+  const cursorRingProgress = document.getElementById('cursor-ring-progress');
+  let cursorVisible = false;
+  const interactiveSelector = 'a, button, [role="button"], input, textarea, select';
+
+  document.addEventListener('mousemove', e => {
+    cursor.style.left = `${e.clientX}px`;
+    cursor.style.top = `${e.clientY}px`;
+    if (!cursorVisible) {
+      document.body.classList.add('cursor-active');
+      cursorVisible = true;
+    }
+  });
+  document.addEventListener('mouseleave', () => {
+    document.body.classList.remove('cursor-active');
+    cursorVisible = false;
+  });
+  document.addEventListener('mouseover', e => {
+    if (e.target.closest(interactiveSelector)) document.body.classList.add('cursor-link');
+  });
+  document.addEventListener('mouseout', e => {
+    if (e.target.closest(interactiveSelector) && !e.relatedTarget?.closest?.(interactiveSelector)) {
+      document.body.classList.remove('cursor-link');
+    }
+  });
+  document.addEventListener('focusin', e => {
+    if (e.target.matches(interactiveSelector)) document.body.classList.add('cursor-link');
+  });
+  document.addEventListener('focusout', e => {
+    if (e.target.matches(interactiveSelector)) document.body.classList.remove('cursor-link');
+  });
+
+  // ブラウザ標準のホイール長押し自動スクロールポインタを表示しない
+  document.addEventListener('mousedown', e => {
+    if (e.button === 1) e.preventDefault();
+  });
+
+  function updateScrollProgress() {
+    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = maxScroll > 0 ? Math.min(1, Math.max(0, window.scrollY / maxScroll)) : 0;
+    cursorRingProgress.style.strokeDashoffset = `${113.1 * (1 - progress)}`;
+  }
+  window.addEventListener('scroll', updateScrollProgress, { passive: true });
+  window.addEventListener('resize', updateScrollProgress);
+  updateScrollProgress();
+
+  // Lightbox
+  const lb = document.getElementById('lightbox');
+  function openLightbox() {
+    lb.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLightbox() {
+    lb.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeLightbox();
+  });
+  // キーボードでも開けるように
+  document.querySelector('.gadget-card').addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(); }
+  });
+</script>
+</body>
+</html>
