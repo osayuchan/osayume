@@ -10,10 +10,10 @@
 <style>
   :root {
     --scroll-progress-deg: 0deg;
-    --surface: rgba(45,45,45,0.68);
-    --surface-strong: rgba(45,45,45,0.82);
-    --border: rgba(210,210,210,0.16);
-    --border-strong: rgba(220,220,220,0.26);
+    --surface: rgba(22,28,42,0.30);
+    --surface-strong: rgba(22,28,42,0.42);
+    --border: rgba(255,255,255,0.16);
+    --border-strong: rgba(255,255,255,0.26);
     --blue: #3B8EE8;
     --purple: #9B8ECC;
     --text-primary: #edf3ff;
@@ -64,21 +64,53 @@
   /* ── Custom cursor and scroll progress ── */
   #custom-cursor {
     position: fixed;
+    left: 0;
+    top: 0;
+    width: 36px;
+    height: 36px;
     pointer-events: none;
     z-index: 300;
     opacity: 0;
-    transition: opacity 0.2s ease, width 0.25s ease, height 0.25s ease;
+    transition: opacity 0.2s ease;
+    will-change: transform;
   }
-  #custom-cursor {
-    width: 18px;
-    height: 18px;
-    position: fixed;
+  .cursor-body {
+    position: absolute;
+    inset: 0;
+    transform: scale(1);
+    transition: transform 0.28s cubic-bezier(.22,.68,0,1.2);
+  }
+  .cursor-round { position: absolute; inset: 0; transition: transform 0.3s cubic-bezier(.22,.68,0,1.2) 0.42s, visibility 0s 0.42s; }
+  body.cursor-scrolling .cursor-round { transform: scale(0.4); visibility: hidden; transition: transform 0.22s ease, visibility 0s 0.22s; }
+  body.cursor-scrolling .cursor-body { transform: none !important; }
+  body.cursor-scrolling { user-select: none; -webkit-user-select: none; }
+  /* スクロール専用: 丸みのある上下矢印カーソル */
+  .cursor-scroll {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 32px; height: 70px;
+    margin: -35px 0 0 -16px;
+    border-radius: 99px;
+    background: rgba(255,255,255,0.06);
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.04);
+    /* 消えるとき: まず極小まで縮む → そのあとフェードで消える */
+    transition: transform 0.32s cubic-bezier(.5,0,.75,.4), opacity 0.2s ease 0.26s, visibility 0s 0.46s;
+  }
+  body.cursor-scrolling .cursor-scroll {
+    opacity: 1; visibility: visible; transform: scale(1);
+    transition: transform 0.32s cubic-bezier(.22,.68,0,1.2), opacity 0.1s ease, visibility 0s;
+  }
+  .cs-arrow { position: absolute; left: 50%; margin-left: -8px; color: #fff; display: block; }
+  .cs-up { top: 9px; opacity: var(--up, 0.4); }
+  .cs-down { bottom: 9px; opacity: var(--down, 0.4); }
+  .cs-knob { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px rgba(255,255,255,0.6); }
+  .cursor-lens {
+    position: absolute;
+    inset: 0;
     border-radius: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(18, 22, 30, 0.28);
-    box-shadow: 0 2px 12px rgba(12, 16, 24, 0.13);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: rgba(255,255,255,0.05);
   }
   .cursor-ring {
     position: absolute;
@@ -107,24 +139,19 @@
     from { filter: hue-rotate(0deg); }
     to { filter: hue-rotate(360deg); }
   }
-  body.cursor-active #custom-cursor,
   body.cursor-active #custom-cursor { opacity: 1; }
-  body.cursor-link #custom-cursor {
-    width: 34px;
-    height: 34px;
-  }
+  body.cursor-link .cursor-body { transform: scale(1.35); }
 
   /* ── 背景画像（めっちゃぼかし） ── */
   #bg-image {
     position: fixed;
     inset: 0;
     z-index: 0;
-    background-image: url('https://github.com/osayuchan/osayume/blob/main/1500x500.jpg?raw=true');
+    background-image: url('https://github.com/osayuchan/osayume/blob/main/El%20Capitan.jpg?raw=true');
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;
-    filter: blur(32px) brightness(0.38) saturate(0.78);
-    transform: scale(1.08);
+    filter: brightness(0.72) saturate(1.05);
     pointer-events: none;
   }
   /* 背景の上に薄い白オーバーレイ */
@@ -132,7 +159,7 @@
     position: fixed;
     inset: 0;
     z-index: 0;
-    background: rgba(3,7,16,0.48);
+    background: rgba(3,7,16,0.16);
     pointer-events: none;
   }
 
@@ -158,6 +185,45 @@
     box-shadow: var(--shadow-sm);
   }
 
+  /* ── Liquid Glass (屈折エンジン用) ── */
+  html [data-liquid-glass] {
+    border-color: rgba(255,255,255,0.20);
+    --lg-rim:
+      inset 0 1px 0 rgba(255,255,255,0.38),
+      inset 1px 0 0 rgba(255,255,255,0.10),
+      inset 0 -1px 0 rgba(255,255,255,0.08),
+      inset 0 0 22px rgba(255,255,255,0.05);
+    box-shadow: var(--lg-rim), 0 10px 32px rgba(0,0,0,0.28);
+    text-shadow: 0 1px 8px rgba(0,0,0,0.35);
+  }
+  /* 押したとき: 縁の光は残したまま、少し沈み込む(影が縮み、内側に影が落ちる) */
+  html .card[data-liquid-glass]:active,
+  html .interest-card[data-liquid-glass]:active,
+  html .gadget-card[data-liquid-glass]:active,
+  html .connect-item[data-liquid-glass]:active {
+    transform: scale(0.972) translateY(2px);
+    box-shadow: var(--lg-rim), inset 0 8px 20px rgba(0,0,0,0.20), 0 2px 10px rgba(0,0,0,0.22);
+  }
+  html .card[data-liquid-glass],
+  html .interest-card[data-liquid-glass],
+  html .gadget-card[data-liquid-glass],
+  html .connect-item[data-liquid-glass] {
+    transition: transform 0.28s cubic-bezier(.3,.7,.2,1), box-shadow 0.28s ease;
+  }
+  /* Chromium以外(Safari/Firefox)は屈折できないので、ぼかしにフォールバック */
+  html[data-lg="blur"] [data-liquid-glass] {
+    backdrop-filter: blur(18px) saturate(1.5) brightness(1.06);
+    -webkit-backdrop-filter: blur(18px) saturate(1.5) brightness(1.06);
+  }
+  html [data-liquid-glass].cursor-lens,
+  html [data-liquid-glass].cursor-scroll {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.55),
+      inset 0 0 0 1px rgba(255,255,255,0.14),
+      0 4px 14px rgba(0,0,0,0.22);
+    text-shadow: none;
+  }
+
   /* ── Wrapper ── */
   .wrapper {
     position: relative;
@@ -175,12 +241,10 @@
     justify-content: center;
     align-items: flex-start;
     padding: 80px 0 60px;
-    opacity: 0;
-    transform: translateY(24px);
-    animation: heroIn 1.0s cubic-bezier(.22,.68,0,1.2) 0.3s forwards;
   }
-  @keyframes heroIn {
-    to { opacity: 1; transform: translateY(0); }
+  @keyframes heroChildIn {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: none; }
   }
 
   .hero-name {
@@ -190,8 +254,7 @@
     line-height: 1;
     color: var(--text-primary);
     margin-bottom: 20px;
-    opacity: 0;
-    animation: heroIn 0.9s cubic-bezier(.22,.68,0,1.2) 0.45s forwards;
+    animation: heroChildIn 0.9s cubic-bezier(.22,.68,0,1.2) 0.45s backwards;
   }
 
   .hero-tagline {
@@ -201,8 +264,7 @@
     font-family: 'LINE Seed JP', sans-serif;
     letter-spacing: 0.02em;
     margin-bottom: 10px;
-    opacity: 0;
-    animation: heroIn 0.8s ease 0.65s forwards;
+    animation: heroChildIn 0.8s ease 0.65s backwards;
   }
 
   .hero-sub {
@@ -212,8 +274,7 @@
     letter-spacing: 0.22em;
     text-transform: uppercase;
     margin-bottom: 52px;
-    opacity: 0;
-    animation: heroIn 0.8s ease 0.8s forwards;
+    animation: heroChildIn 0.8s ease 0.8s backwards;
   }
 
   .hero-cta {
@@ -231,8 +292,7 @@
     -webkit-backdrop-filter: blur(24px);
     box-shadow: var(--shadow-sm);
     cursor: pointer;
-    opacity: 0;
-    animation: heroIn 0.8s ease 1.0s forwards;
+    animation: heroChildIn 0.8s ease 1.0s backwards;
     transition: transform 0.3s ease, background 0.3s ease;
   }
   .hero-cta:active {
@@ -278,19 +338,41 @@
     box-shadow: var(--shadow-md);
   }
 
-  /* ── About ── */
-  #about .about-text {
+  /* ── Profile sections ── */
+  .info-text {
     font-family: 'LINE Seed JP', sans-serif;
     font-size: 15px;
     font-weight: 300;
     color: var(--text-secondary);
     line-height: 2;
   }
-  #about .about-text p + p { margin-top: 1.5em; }
-  #about .about-text p:first-child {
-    font-size: 16px;
+  .info-text p + p { margin-top: 1.2em; }
+  .info-text .lead { color: var(--text-primary); font-weight: 400; font-size: 16px; }
+  .info-list {
+    list-style: none;
+    margin: 14px 0 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .info-list li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'LINE Seed JP', sans-serif;
+    font-size: 14px;
     color: var(--text-primary);
-    font-weight: 400;
+    padding: 8px 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.10);
+  }
+  .info-list li::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--blue);
+    flex-shrink: 0;
   }
 
   /* ── New Chapter ── */
@@ -389,8 +471,46 @@
     box-shadow: var(--shadow-sm);
     overflow: hidden;
     cursor: pointer;
+    padding: 10px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
+  /* ── Gadget carousel ── */
+  .gadget-viewport { overflow: hidden; margin: 0 -12px; padding: 2px 0 26px; touch-action: pan-y; }
+  .gadget-track { display: flex; transition: transform 0.6s cubic-bezier(.22,.68,0,1); will-change: transform; }
+  .gadget-slide { flex: 0 0 100%; min-width: 0; padding: 0 12px; }
+  .gadget-controls {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; margin-top: -6px;
+  }
+  .gc-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: #fff; cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+  .gc-btn:active { transform: scale(0.92); }
+  .gc-btn svg { display: block; }
+  .gc-pause .ic-play { display: none; }
+  .gc-pause.is-paused .ic-play { display: block; }
+  .gc-pause.is-paused .ic-pause { display: none; }
+  .gc-pill {
+    height: 44px; padding: 0 20px; border-radius: 100px;
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  .gc-dot { display: flex; align-items: center; padding: 10px 0; background: none; border: 0; color: inherit; }
+  .gc-bar {
+    display: block; width: 8px; height: 8px; border-radius: 99px;
+    background: rgba(255,255,255,0.55);
+    position: relative; overflow: hidden;
+    transition: width 0.4s cubic-bezier(.22,.68,0,1), background 0.3s ease;
+  }
+  .gc-dot.active .gc-bar { width: 40px; background: rgba(255,255,255,0.28); }
+  .gc-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: #fff; border-radius: inherit; }
+
   .gadget-card:active { transform: scale(0.985); box-shadow: var(--shadow-md); }
   .gadget-img {
     width: 100%;
@@ -399,11 +519,11 @@
     object-fit: cover;
     display: block;
     background: rgba(0,0,0,0.16);
-    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    border-radius: 14px;
     transition: filter 0.3s ease;
   }
   .gadget-label {
-    padding: 12px 16px 14px;
+    padding: 12px 8px 4px;
     display: flex;
     align-items: baseline;
     gap: 8px;
@@ -461,10 +581,19 @@
     opacity: 0;
     transform: scale(0.96);
     transition: opacity 0.4s ease, transform 0.4s cubic-bezier(.22,.68,0,1.15);
+    will-change: transform;
   }
   #lightbox.open .lb-img {
     opacity: 1;
-    transform: scale(1);
+    transform: none;
+    animation: lbSpinPop 1s linear;
+  }
+  /* 横向きに2回転(720°)しながらポップアップ → 少し行き過ぎてから、ゆったり正面に着地 */
+  @keyframes lbSpinPop {
+    0%   { opacity: 0; transform: perspective(1400px) rotateY(0deg) scale(0.15); animation-timing-function: cubic-bezier(.25,.7,.3,1); }
+    12%  { opacity: 1; }
+    66%  { opacity: 1; transform: perspective(1400px) rotateY(750deg) scale(1.1); animation-timing-function: cubic-bezier(.3,0,.2,1); }
+    100% { opacity: 1; transform: perspective(1400px) rotateY(720deg) scale(1); }
   }
   .lb-close {
     position: absolute;
@@ -576,7 +705,7 @@
   .reveal.visible {
     opacity: 1;
     transform: none;
-    filter: blur(0);
+    filter: none;
   }
 
   /* ── Reduced motion ── */
@@ -609,21 +738,31 @@
 <div id="bg-image" aria-hidden="true"></div>
 <div id="bg-overlay" aria-hidden="true"></div>
 <div id="custom-cursor" aria-hidden="true">
-  <svg class="cursor-ring" viewBox="0 0 44 44" aria-hidden="true">
-    <defs>
-      <linearGradient id="cursor-rainbow-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#ffb8d2" />
-        <stop offset="16%" stop-color="#ffd6a8" />
-        <stop offset="32%" stop-color="#fff0a8" />
-        <stop offset="48%" stop-color="#c9edb7" />
-        <stop offset="64%" stop-color="#a9e5ef" />
-        <stop offset="80%" stop-color="#b9c8ff" />
-        <stop offset="100%" stop-color="#dec0ff" />
-      </linearGradient>
-    </defs>
-    <circle class="cursor-ring-track" cx="22" cy="22" r="18" />
-    <circle id="cursor-ring-progress" class="cursor-ring-progress" cx="22" cy="22" r="18" />
-  </svg>
+  <div class="cursor-body">
+    <div class="cursor-round">
+      <div class="cursor-lens" data-liquid-glass></div>
+      <svg class="cursor-ring" viewBox="0 0 44 44" aria-hidden="true">
+        <defs>
+          <linearGradient id="cursor-rainbow-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ffb8d2" />
+            <stop offset="16%" stop-color="#ffd6a8" />
+            <stop offset="32%" stop-color="#fff0a8" />
+            <stop offset="48%" stop-color="#c9edb7" />
+            <stop offset="64%" stop-color="#a9e5ef" />
+            <stop offset="80%" stop-color="#b9c8ff" />
+            <stop offset="100%" stop-color="#dec0ff" />
+          </linearGradient>
+        </defs>
+        <circle class="cursor-ring-track" cx="22" cy="22" r="18" />
+        <circle id="cursor-ring-progress" class="cursor-ring-progress" cx="22" cy="22" r="18" />
+      </svg>
+    </div>
+    <div class="cursor-scroll" data-liquid-glass>
+      <svg class="cs-arrow cs-up" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 10L8 5.5 12.5 10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="cs-knob"></span>
+      <svg class="cs-arrow cs-down" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 6L8 10.5 12.5 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
 </div>
 
 <main>
@@ -632,25 +771,76 @@
   <div class="wrapper" style="position:relative;">
     <section id="hero" aria-label="ファーストビュー">
       <h1 class="hero-name">OSAYU.</h1>
-      <button class="hero-cta" onclick="document.getElementById('about').scrollIntoView({behavior:'smooth'})">
+      <button class="hero-cta" data-liquid-glass onclick="document.getElementById('about-me').scrollIntoView({behavior:'smooth'})">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M7 1v12M2 8l5 5 5-5" stroke="#3B8EE8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        Good Morning
+        <span id="greeting">Good Morning</span>
       </button>
     </section>
   </div>
 
-  <!-- ── ABOUT ── -->
+  <!-- ── ABOUT ME ── -->
   <div class="wrapper">
-    <section id="about" aria-label="About">
-      <p class="section-label reveal">About</p>
-      <div class="card reveal">
-        <div class="about-text">
-          <p>おはようございます、おさゆです。</p>
-          <p>ガジェット界隈に入りたてほやほやの無知ですが何卒宜しくお願い致します。</p>
-          <p>これからいろんな人と関わったり、この界隈の雰囲気とかを見てみたいので浮上多めになるかもしれませんが宜しくお願いします。</p>
-          <p>あと自称キチガイなので許してください。</p>
+    <section id="about-me" aria-label="About Me">
+      <p class="section-label reveal">ABOUT ME</p>
+      <div class="card reveal" data-liquid-glass>
+        <div class="info-text">
+          <p class="lead">はじめまして、おさゆです。</p>
+          <p>ガジェットやテクノロジーが大好きな学生です。</p>
+          <p>スマートフォンを中心に、PC、ネットワーク、ソフトウェアなど、幅広い分野に興味があります。</p>
+          <p>気になったものは実際に触って試してみるタイプ。新しい技術や面白いものを見つけると、ついつい深掘りしてしまいます。</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ── MY INTERESTS ── -->
+  <div class="wrapper">
+    <section id="my-interests" aria-label="My Interests">
+      <p class="section-label reveal">MY INTERESTS</p>
+      <div class="card reveal" data-liquid-glass>
+        <div class="info-text">
+          <p class="lead">普段はこんなことに興味があります。</p>
+          <ul class="info-list">
+            <li>Huawei / Android</li>
+            <li>PC / Linux サーバー</li>
+            <li>ネットワーク / サイト作り</li>
+            <li>AI / プログラミング</li>
+            <li>Webデザイン / UI開発</li>
+            <li>ガジェット全般</li>
+          </ul>
+          <p>特にAndroid端末や中国メーカーの製品が好きです。<br>Appleは見た目はいいけど自由度少ないからあんまり気にならない。</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ── MY STYLE ── -->
+  <div class="wrapper">
+    <section id="my-style" aria-label="My Style">
+      <p class="section-label reveal">MY STYLE</p>
+      <div class="card reveal" data-liquid-glass>
+        <div class="info-text">
+          <p class="lead">金</p>
+          <p>ほしいと思ったら、金があったらすぐ買うタイプの人です。</p>
+          <p>そのせいで家が最近ゴミ屋敷</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ── COMMUNITY ── -->
+  <div class="wrapper">
+    <section id="community" aria-label="Community">
+      <p class="section-label reveal">COMMUNITY</p>
+      <div class="card reveal" data-liquid-glass>
+        <div class="info-text">
+          <p class="lead">キチガイ</p>
+          <p>こんなやばい人がいっぱいいる界隈ですが、自分もやばい人なのでよろしくお願いします！</p>
+          <p>RPとかコメントしてもらえると結構うれしいかも。</p>
+          <p>めちゃくちゃ変わってる人間ですが、ネッ友募集中です。</p>
+          <p>とにかくよろしくね</p>
         </div>
       </div>
     </section>
@@ -661,19 +851,19 @@
     <section id="interests" aria-label="Interests">
       <p class="section-label reveal">特徴?</p>
       <div class="interests-grid reveal">
-        <div class="interest-card">
+        <div class="interest-card" data-liquid-glass>
           <span class="interest-name">キャリアショップ</span>
           <p class="interest-desc">店員にスマホドやりにいく</p>
         </div>
-        <div class="interest-card">
+        <div class="interest-card" data-liquid-glass>
           <span class="interest-name">メルカリ</span>
           <p class="interest-desc">激安価格ミス出品買いたい</p>
         </div>
-        <div class="interest-card">
+        <div class="interest-card" data-liquid-glass>
           <span class="interest-name">産廃泥</span>
           <p class="interest-desc">大人のおもちゃ</p>
         </div>
-        <div class="interest-card">
+        <div class="interest-card" data-liquid-glass>
           <span class="interest-name">産廃2</span>
           <p class="interest-desc">ハイエンド買うために貯金したと思ったら産廃買ってる</p>
         </div>
@@ -685,30 +875,58 @@
   <div class="wrapper">
     <section id="gadget" aria-label="Gadget">
       <p class="section-label reveal">布陣</p>
-      <div class="gadget-card reveal" onclick="openLightbox()" role="button" tabindex="0" aria-label="iPhone 15の写真を拡大">
-        <img
-          class="gadget-img"
-          src="https://github.com/osayuchan/osayume/blob/main/1793416876269.jpg?raw=true"
-          alt="iPhone 15"
-          loading="lazy"
-        >
-        <div class="gadget-label">
-          <span class="gadget-label-name">iPhone 15</span>
-          <span class="gadget-label-sub">Apple A16 Bionic</span>
+      <div class="gadget-carousel reveal" id="gadget-carousel" role="region" aria-roledescription="carousel" aria-label="布陣">
+        <div class="gadget-viewport">
+          <div class="gadget-track" id="gadget-track">
+        <div class="gadget-slide" role="group" aria-roledescription="slide" aria-label="1 / 3">
+        <div class="gadget-card" data-liquid-glass data-lb-src="https://github.com/osayuchan/osayume/blob/main/1793416876269.jpg?raw=true" data-lb-alt="iPhone 15" role="button" tabindex="0" aria-label="iPhone 15の写真を拡大">
+          <img class="gadget-img" src="https://github.com/osayuchan/osayume/blob/main/1793416876269.jpg?raw=true" alt="iPhone 15" loading="lazy">
+          <div class="gadget-label">
+            <span class="gadget-label-name">iPhone 15</span>
+            <span class="gadget-label-sub">Apple A16 Bionic</span>
+          </div>
+        </div>
+        </div>
+        <div class="gadget-slide" role="group" aria-roledescription="slide" aria-label="2 / 3">
+        <div class="gadget-card" data-liquid-glass data-lb-src="https://github.com/osayuchan/osayume/blob/main/IMG_20261120_100151.jpg?raw=true" data-lb-alt="Rakuten Mini" role="button" tabindex="0" aria-label="Rakuten Miniの写真を拡大">
+          <img class="gadget-img" src="https://github.com/osayuchan/osayume/blob/main/IMG_20261120_100151.jpg?raw=true" alt="Rakuten Mini" loading="lazy">
+          <div class="gadget-label">
+            <span class="gadget-label-name">Rakuten Mini</span>
+          </div>
+        </div>
+        </div>
+        <div class="gadget-slide" role="group" aria-roledescription="slide" aria-label="3 / 3">
+        <div class="gadget-card" data-liquid-glass data-lb-src="https://github.com/osayuchan/osayume/blob/main/FOTOR_20261120_101309.JPG?raw=true" data-lb-alt="Honor V Purse" role="button" tabindex="0" aria-label="Honor V Purseの写真を拡大">
+          <img class="gadget-img" src="https://github.com/osayuchan/osayume/blob/main/FOTOR_20261120_101309.JPG?raw=true" alt="Honor V Purse" loading="lazy">
+          <div class="gadget-label">
+            <span class="gadget-label-name">Honor V Purse</span>
+          </div>
+        </div>
+        </div>
+          </div>
+        </div>
+        <div class="gadget-controls">
+          <button class="gc-btn" id="gc-prev" data-liquid-glass aria-label="前へ"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <div class="gc-pill" data-liquid-glass>
+            <button class="gc-dot" aria-label="1枚目"><span class="gc-bar"><span class="gc-fill"></span></span></button>
+            <button class="gc-dot" aria-label="2枚目"><span class="gc-bar"><span class="gc-fill"></span></span></button>
+            <button class="gc-dot" aria-label="3枚目"><span class="gc-bar"><span class="gc-fill"></span></span></button>
+          </div>
+          <button class="gc-btn" id="gc-next" data-liquid-glass aria-label="次へ"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="gc-btn gc-pause" id="gc-pause" data-liquid-glass aria-label="自動切り替えを停止">
+            <svg class="ic-pause" width="14" height="14" viewBox="0 0 14 14"><rect x="2.5" y="1.5" width="3.2" height="11" rx="1.2" fill="currentColor"/><rect x="8.3" y="1.5" width="3.2" height="11" rx="1.2" fill="currentColor"/></svg>
+            <svg class="ic-play" width="14" height="14" viewBox="0 0 14 14"><path d="M3.5 1.8v10.4a.8.8 0 0 0 1.2.7l8-5.2a.8.8 0 0 0 0-1.4l-8-5.2a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+          </button>
         </div>
       </div>
     </section>
   </div>
 
   <!-- ── LIGHTBOX ── -->
-  <div id="lightbox" role="dialog" aria-modal="true" aria-label="iPhone 15 拡大表示">
+  <div id="lightbox" role="dialog" aria-modal="true" aria-label="写真の拡大表示">
     <div class="lb-backdrop" onclick="closeLightbox()"></div>
     <button class="lb-close" onclick="closeLightbox()" aria-label="閉じる">×</button>
-    <img
-      class="lb-img"
-      src="https://github.com/osayuchan/osayume/blob/main/1793416876269.jpg?raw=true"
-      alt="iPhone 15"
-    >
+    <img class="lb-img" src="" alt="">
   </div>
 
   <!-- ── CONNECT ── -->
@@ -716,7 +934,7 @@
     <section id="connect" aria-label="Connect">
       <p class="section-label reveal">SNS</p>
       <div class="connect-list">
-        <a class="connect-item reveal" href="https://x.com/osayuhamizu" target="_blank" rel="noopener">
+        <a class="connect-item reveal" data-liquid-glass href="https://x.com/honorvpuese" target="_blank" rel="noopener">
           <img
             class="connect-favicon"
             src="https://www.google.com/s2/favicons?sz=64&domain=x.com"
@@ -725,11 +943,11 @@
           >
           <div class="connect-text">
             <span class="connect-name">X (Twitter)</span>
-            <span class="connect-status">@osayuhamizu</span>
+            <span class="connect-status">@honorvpuese</span>
           </div>
           <span class="connect-arrow">›</span>
         </a>
-        <a class="connect-item reveal" href="https://www.tiktok.com/@osayuhamizu" target="_blank" rel="noopener">
+        <a class="connect-item reveal" data-liquid-glass href="https://www.tiktok.com/@osayuhamizu" target="_blank" rel="noopener">
           <img
             class="connect-favicon"
             src="https://www.google.com/s2/favicons?sz=64&domain=tiktok.com"
@@ -750,7 +968,7 @@
   <div class="wrapper">
     <footer>
       <p class="footer-brand reveal">OSAYU.</p>
-      <p class="footer-copy reveal">© 2026 おさゆちゃん — Version 1.0</p>
+      <p class="footer-copy reveal">© 2026 おさゆちゃん — Version 27</p>
     </footer>
   </div>
 
@@ -773,11 +991,13 @@
   const cursor = document.getElementById('custom-cursor');
   const cursorRingProgress = document.getElementById('cursor-ring-progress');
   let cursorVisible = false;
+  const autoscroll = { on: false, ox: 0, oy: 0, pos: 0, raf: 0, last: 0 };
+  const lastMouse = { x: 0, y: 0 };
   const interactiveSelector = 'a, button, [role="button"], input, textarea, select';
 
   document.addEventListener('mousemove', e => {
-    cursor.style.left = `${e.clientX}px`;
-    cursor.style.top = `${e.clientY}px`;
+    lastMouse.x = e.clientX; lastMouse.y = e.clientY;
+    cursor.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0) translate(-50%, -50%)`;
     if (!cursorVisible) {
       document.body.classList.add('cursor-active');
       cursorVisible = true;
@@ -802,10 +1022,55 @@
     if (e.target.matches(interactiveSelector)) document.body.classList.remove('cursor-link');
   });
 
-  // ブラウザ標準のホイール長押し自動スクロールポインタを表示しない
+  // マウスホイール(中ボタン)長押しでスクロール。押している間、最初に押した位置からの
+  // 縦距離に応じて上下へ進む。カーソルは丸から上下矢印の専用スクロールバーに変わり、
+  // そのバーはマウスの縦横どちらにも追従する。
+  const csKnob = cursor.querySelector('.cs-knob');
+  const AS_DEAD = 10;
+  function autoscrollTick(now) {
+    if (!autoscroll.on) return;
+    const dt = Math.min(50, now - autoscroll.last);
+    autoscroll.last = now;
+    const dy = lastMouse.y - autoscroll.oy;
+    const a = Math.max(0, Math.abs(dy) - AS_DEAD);
+    const v = Math.sign(dy) * a * (6 + a * 0.06);          // px/秒
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    autoscroll.pos = Math.min(max, Math.max(0, autoscroll.pos + v * dt / 1000));
+    window.scrollTo({ top: autoscroll.pos, behavior: 'instant' });
+    const k = Math.max(-1, Math.min(1, dy / 90));
+    csKnob.style.transform = `translateY(${k * 24}px)`;
+    cursor.style.setProperty('--up', (0.4 + Math.max(0, -k) * 0.6).toFixed(2));
+    cursor.style.setProperty('--down', (0.4 + Math.max(0, k) * 0.6).toFixed(2));
+    autoscroll.raf = requestAnimationFrame(autoscrollTick);
+  }
+  function stopAutoscroll() {
+    if (!autoscroll.on) return;
+    autoscroll.on = false;
+    cancelAnimationFrame(autoscroll.raf);
+    document.body.classList.remove('cursor-scrolling');
+    cursor.style.transform = `translate3d(${lastMouse.x}px, ${lastMouse.y}px, 0) translate(-50%, -50%)`;
+    csKnob.style.transform = '';
+    cursor.style.removeProperty('--up');
+    cursor.style.removeProperty('--down');
+  }
   document.addEventListener('mousedown', e => {
-    if (e.button === 1) e.preventDefault();
+    if (e.button !== 1) return;
+    e.preventDefault();                                     // ブラウザ標準の自動スクロールは出さない
+    if (document.getElementById('lightbox').classList.contains('open')) return;
+    lastMouse.x = e.clientX; lastMouse.y = e.clientY;
+    autoscroll.on = true;
+    autoscroll.ox = e.clientX; autoscroll.oy = e.clientY;
+    autoscroll.pos = window.scrollY;
+    autoscroll.last = performance.now();
+    cursor.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0) translate(-50%, -50%)`;
+    document.body.classList.add('cursor-active', 'cursor-scrolling');
+    cursorVisible = true;
+    autoscroll.raf = requestAnimationFrame(autoscrollTick);
   });
+  window.addEventListener('mouseup', e => { if (e.button === 1) stopAutoscroll(); });
+  window.addEventListener('blur', stopAutoscroll);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopAutoscroll(); });
+  document.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
 
   function updateScrollProgress() {
     const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
@@ -818,21 +1083,252 @@
 
   // Lightbox
   const lb = document.getElementById('lightbox');
-  function openLightbox() {
+  const lbImg = lb.querySelector('.lb-img');
+  function openLightbox(card) {
+    lbImg.src = card.dataset.lbSrc;
+    lbImg.alt = card.dataset.lbAlt || '';
+    lb.setAttribute('aria-label', (card.dataset.lbAlt || '写真') + ' 拡大表示');
+    lb._opener = card;
     lb.classList.add('open');
     document.body.style.overflow = 'hidden';
+    lb.querySelector('.lb-close').focus({ preventScroll: true });
   }
   function closeLightbox() {
+    if (!lb.classList.contains('open')) return;
     lb.classList.remove('open');
     document.body.style.overflow = '';
+    if (lb._opener) { lb._opener.focus({ preventScroll: true }); lb._opener = null; }
   }
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeLightbox();
   });
-  // キーボードでも開けるように
-  document.querySelector('.gadget-card').addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(); }
+  document.querySelectorAll('.gadget-card').forEach(card => {
+    card.addEventListener('click', () => openLightbox(card));
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(card); }
+    });
   });
+
+  // 時刻に合わせた挨拶
+  const greetingEl = document.getElementById('greeting');
+  function updateGreeting() {
+    const h = new Date().getHours();
+    greetingEl.textContent =
+      h >= 5 && h < 10  ? 'Good Morning' :
+      h >= 10 && h < 17 ? 'Hello' :
+      h >= 17 && h < 21 ? 'Good Evening' :
+                          'Hello, Night Owl';
+  }
+  updateGreeting();
+  setInterval(updateGreeting, 60000);
+
+  // 布陣カルーセル(自動切り替え + 矢印 + スワイプ)
+  (() => {
+    const root = document.getElementById('gadget-carousel');
+    const track = document.getElementById('gadget-track');
+    const dots = [...root.querySelectorAll('.gc-dot')];
+    const fills = dots.map(d => d.querySelector('.gc-fill'));
+    const pauseBtn = document.getElementById('gc-pause');
+    const n = dots.length, DUR = 5000;
+    let idx = 0, elapsed = 0, last = performance.now();
+    let paused = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let inView = true;
+
+    function render() {
+      track.style.transform = `translateX(${-idx * 100}%)`;
+      [...track.children].forEach((sl, i) => sl.toggleAttribute('inert', i !== idx));
+      dots.forEach((d, i) => {
+        d.classList.toggle('active', i === idx);
+        if (i === idx) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current');
+        if (i !== idx) fills[i].style.width = '0';
+      });
+    }
+    function go(i) { idx = (i + n) % n; elapsed = 0; render(); }
+    function setPaused(v) {
+      paused = v;
+      pauseBtn.classList.toggle('is-paused', v);
+      pauseBtn.setAttribute('aria-label', v ? '自動切り替えを再開' : '自動切り替えを停止');
+    }
+    setPaused(paused);
+
+    document.getElementById('gc-prev').addEventListener('click', () => go(idx - 1));
+    document.getElementById('gc-next').addEventListener('click', () => go(idx + 1));
+    pauseBtn.addEventListener('click', () => setPaused(!paused));
+    dots.forEach((d, i) => d.addEventListener('click', () => go(i)));
+    root.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft') go(idx - 1);
+      if (e.key === 'ArrowRight') go(idx + 1);
+    });
+
+    // スワイプ
+    let sx = 0, sy = 0;
+    root.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+    root.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) go(idx + (dx < 0 ? 1 : -1));
+    }, { passive: true });
+
+    new IntersectionObserver(es => { inView = es[0].isIntersecting; }, { threshold: 0.4 }).observe(root);
+
+    function tick(now) {
+      const dt = Math.min(100, now - last);
+      last = now;
+      if (!paused && inView && !document.hidden && !lb.classList.contains('open')) {
+        elapsed += dt;
+        if (elapsed >= DUR) go(idx + 1);
+      }
+      fills[idx].style.width = `${Math.min(1, elapsed / DUR) * 100}%`;
+      requestAnimationFrame(tick);
+    }
+    render();
+    requestAnimationFrame(tick);
+  })();
+
+  /* ═══════════════════════════════════════════════
+     Liquid Glass Optical Refraction Engine (inline)
+     [data-liquid-glass] の要素に、SDFベースの変位マップ +
+     feDisplacementMap(RGB別倍率=色収差)を backdrop-filter で適用。
+     屈折が効くのはChromium系のみ。他はぼかしにフォールバック。
+     ═══════════════════════════════════════════════ */
+  (() => {
+    const ua = navigator.userAgent;
+    const brands = navigator.userAgentData && navigator.userAgentData.brands;
+    const refractive = brands
+      ? brands.some(b => /Chromium|Google Chrome|Microsoft Edge/i.test(b.brand))
+      : (/Chrome\//.test(ua) && !/iPhone|iPad|iPod|Firefox|FxiOS/.test(ua));
+
+    const root = document.documentElement;
+    root.setAttribute('data-lg', refractive ? 'refract' : 'blur');
+    if (!refractive) return;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', '0');
+    svg.setAttribute('height', '0');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.style.cssText = 'position:absolute;width:0;height:0;pointer-events:none';
+    const defs = document.createElementNS(NS, 'defs');
+    svg.appendChild(defs);
+    document.body.appendChild(svg);
+
+    const filters = new Map();   // key -> filter id
+    let uid = 0;
+
+    // 凸レンズ状のベゼル: 縁ほど強く、内側(bezel以深)は歪みゼロ
+    const profile = t => Math.pow(1 - Math.sqrt(1 - (1 - t) * (1 - t)), 0.55);
+
+    function buildMap(w, h, r, bezel) {
+      const k = Math.min(1, 400 / Math.max(w, h));
+      const mw = Math.max(2, Math.round(w * k));
+      const mh = Math.max(2, Math.round(h * k));
+      const c = document.createElement('canvas');
+      c.width = mw; c.height = mh;
+      const ctx = c.getContext('2d');
+      const img = ctx.createImageData(mw, mh);
+      const d = img.data;
+      const hw = w / 2, hh = h / 2;
+      for (let y = 0; y < mh; y++) {
+        const py = (y + 0.5) / mh * h - hh;
+        const sy = py < 0 ? -1 : 1;
+        for (let x = 0; x < mw; x++) {
+          const px = (x + 0.5) / mw * w - hw;
+          const sx = px < 0 ? -1 : 1;
+          const qx = Math.abs(px) - (hw - r);
+          const qy = Math.abs(py) - (hh - r);
+          const ox = Math.max(qx, 0), oy = Math.max(qy, 0);
+          const len = Math.hypot(ox, oy);
+          const depth = -(len + Math.min(Math.max(qx, qy), 0) - r);
+          let dx = 0, dy = 0;
+          if (depth < bezel) {
+            const mag = profile(Math.min(1, Math.max(0, depth) / bezel));
+            let gx, gy;                         // SDFの勾配(外向き)
+            if (qx > 0 && qy > 0) { gx = sx * ox / len; gy = sy * oy / len; }
+            else if (qx > qy)     { gx = sx; gy = 0; }
+            else                  { gx = 0;  gy = sy; }
+            dx = -gx * mag;                     // 内向きにサンプルする
+            dy = -gy * mag;
+          }
+          const i = (y * mw + x) * 4;
+          d[i]     = 128 + dx * 127;
+          d[i + 1] = 128 + dy * 127;
+          d[i + 2] = 128;
+          d[i + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+      return c.toDataURL('image/png');
+    }
+
+    function getFilter(w, h, r) {
+      const key = `${w}x${h}r${r}`;
+      if (filters.has(key)) return filters.get(key);
+      const bezel = Math.max(4, Math.min(34, Math.min(w, h) * 0.5 * 0.85));
+      const maxPx = bezel * 1.0;
+      const scale = maxPx * 2;                   // C=1 で +scale/2
+      const id = `lg-${++uid}`;
+      const href = buildMap(w, h, r, bezel);
+      const ch = (mul, row) => `
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="${(scale * mul).toFixed(2)}" xChannelSelector="R" yChannelSelector="G" result="d${row}"/>
+        <feColorMatrix in="d${row}" type="matrix" values="${row === 'R' ? '1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0' : row === 'G' ? '0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0' : '0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0'}" result="c${row}"/>`;
+      defs.insertAdjacentHTML('beforeend', `
+        <filter id="${id}" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="${w}" height="${h}" color-interpolation-filters="sRGB">
+          <feImage href="${href}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none" result="map"/>
+          ${ch(0.94, 'R')}${ch(1.0, 'G')}${ch(1.06, 'B')}
+          <feBlend in="cR" in2="cG" mode="screen" result="rg"/>
+          <feBlend in="rg" in2="cB" mode="screen"/>
+        </filter>`);
+      filters.set(key, id);
+      return id;
+    }
+
+    function parseRadius(v, w, h) {
+      let r = 0;
+      if (v.endsWith('%')) r = parseFloat(v) / 100 * Math.min(w, h);
+      else r = parseFloat(v) || 0;
+      return Math.round(Math.min(r, w / 2, h / 2));
+    }
+
+    function apply(el) {
+      const w = el.offsetWidth, h = el.offsetHeight;
+      if (!w || !h) return;
+      const r = parseRadius(getComputedStyle(el).borderTopLeftRadius, w, h);
+      const key = `${w}x${h}r${r}`;
+      if (el.__lgKey === key) return;
+      el.__lgKey = key;
+      const id = getFilter(w, h, r);
+      const v = `blur(1.5px) url(#${id}) saturate(1.35) brightness(1.06)`;
+      el.style.backdropFilter = v;
+      el.style.webkitBackdropFilter = v;
+    }
+
+    let queued = new Set(), raf = 0;
+    function schedule(el) {
+      queued.add(el);
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const list = queued; queued = new Set();
+        list.forEach(apply);
+      });
+    }
+
+    const ro = new ResizeObserver(entries => entries.forEach(en => schedule(en.target)));
+    function attach(el) {
+      if (el.__lgAttached) return;
+      el.__lgAttached = true;
+      ro.observe(el);
+      schedule(el);
+    }
+    function scan(node) {
+      if (node.nodeType !== 1) return;
+      if (node.matches('[data-liquid-glass]')) attach(node);
+      node.querySelectorAll && node.querySelectorAll('[data-liquid-glass]').forEach(attach);
+    }
+    scan(document.body);
+    new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(scan)))
+      .observe(document.body, { childList: true, subtree: true });
+    document.fonts && document.fonts.ready.then(() => document.querySelectorAll('[data-liquid-glass]').forEach(schedule));
+  })();
 </script>
 </body>
 </html>
